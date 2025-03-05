@@ -9,6 +9,8 @@ Features:
 
 ✅ Interactive prompts for hostname, timezone, locale, and SSH port
 
+✅ Optional install for endlessh
+
 ✅ Essential packages installation (sudo, curl, wget, ntp, htop, unattended-upgrades)
 
 ✅ Optional MOTD script for server insights
