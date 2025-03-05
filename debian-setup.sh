@@ -15,6 +15,14 @@ read -p "Enter the desired hostname: " hostname
 hostnamectl set-hostname "$hostname"
 echo "Hostname set to $hostname"
 
+# Update /etc/hosts to reflect the new hostname
+if grep -q "127.0.1.1" /etc/hosts; then
+    sed -i "s/^127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
+else
+    echo "127.0.1.1 $hostname" >> /etc/hosts
+fi
+echo "Updated /etc/hosts with hostname $hostname"
+
 # Set Timezone from List
 echo "Select a timezone:"
 select timezone in $(timedatectl list-timezones); do
