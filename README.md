@@ -7,7 +7,7 @@ Usage:
     
 Features:
 
-✅ Interactive prompts for hostname, timezone, locale, and SSH port
+✅ Interactive prompts for hostname with /etc/hosts, timezone, locale, and SSH port
 
 ✅ Optional install for endlessh
 
