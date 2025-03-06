@@ -23,14 +23,24 @@ else
 fi
 echo "Updated /etc/hosts with hostname $hostname"
 
-# Set Timezone from List
-echo "Select a timezone:"
-timedatectl list-timezones | nl  # Numbered list of timezones
-
+# Set Timezone with Search
 while true; do
-    read -p "Enter the number corresponding to your timezone: " tz_number
-    timezone=$(timedatectl list-timezones | sed -n "${tz_number}p")  # Get selected timezone
-    if [ -n "$timezone" ]; then
+    read -p "Enter part of your timezone (e.g., 'Europe' or 'Berlin') and press Enter: " tz_search
+    matching_timezones=($(timedatectl list-timezones | grep -i "$tz_search"))
+
+    if [ ${#matching_timezones[@]} -eq 0 ]; then
+        echo "No matching timezones found. Try again."
+        continue
+    fi
+
+    echo "Matching timezones:"
+    for i in "${!matching_timezones[@]}"; do
+        echo "$((i+1))) ${matching_timezones[i]}"
+    done
+
+    read -p "Enter the number of your desired timezone: " tz_number
+    if [[ "$tz_number" =~ ^[0-9]+$ ]] && [ "$tz_number" -ge 1 ] && [ "$tz_number" -le "${#matching_timezones[@]}" ]; then
+        timezone="${matching_timezones[$((tz_number-1))]}"
         timedatectl set-timezone "$timezone"
         echo "Timezone set to $timezone"
         break
