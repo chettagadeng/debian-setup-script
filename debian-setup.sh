@@ -25,7 +25,11 @@ echo "Updated /etc/hosts with hostname $hostname"
 
 # Set Timezone from List
 echo "Select a timezone:"
-select timezone in $(timedatectl list-timezones); do
+timedatectl list-timezones | nl  # Numbered list of timezones
+
+while true; do
+    read -p "Enter the number corresponding to your timezone: " tz_number
+    timezone=$(timedatectl list-timezones | sed -n "${tz_number}p")  # Get selected timezone
     if [ -n "$timezone" ]; then
         timedatectl set-timezone "$timezone"
         echo "Timezone set to $timezone"
@@ -37,10 +41,12 @@ done
 
 # Set Locale from List
 echo "Select a locale:"
-locales=($(locale -a | grep -E 'utf8|UTF-8'))  # Store locales in an array
+locale -a | grep -E 'utf8|UTF-8' | nl  # Numbered list of locales
 
-select locale in "${locales[@]}"; do
-    if [[ -n "$locale" ]]; then
+while true; do
+    read -p "Enter the number corresponding to your locale: " locale_number
+    locale=$(locale -a | grep -E 'utf8|UTF-8' | sed -n "${locale_number}p")  # Get selected locale
+    if [ -n "$locale" ]; then
         sed -i "s/^# *$locale UTF-8/$locale UTF-8/" /etc/locale.gen
         locale-gen
         update-locale LANG=$locale
