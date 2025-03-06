@@ -49,14 +49,24 @@ while true; do
     fi
 done
 
-# Set Locale from List
-echo "Select a locale:"
-locale -a | grep -E 'utf8|UTF-8' | nl  # Numbered list of locales
-
+# Set Locale with Search
 while true; do
-    read -p "Enter the number corresponding to your locale: " locale_number
-    locale=$(locale -a | grep -E 'utf8|UTF-8' | sed -n "${locale_number}p")  # Get selected locale
-    if [ -n "$locale" ]; then
+    read -p "Enter part of your preferred locale (e.g., 'en' or 'de') and press Enter: " locale_search
+    matching_locales=($(locale -a | grep -i "$locale_search" | grep -E 'utf8|UTF-8'))
+
+    if [ ${#matching_locales[@]} -eq 0 ]; then
+        echo "No matching locales found. Try again."
+        continue
+    fi
+
+    echo "Matching locales:"
+    for i in "${!matching_locales[@]}"; do
+        echo "$((i+1))) ${matching_locales[i]}"
+    done
+
+    read -p "Enter the number of your desired locale: " locale_number
+    if [[ "$locale_number" =~ ^[0-9]+$ ]] && [ "$locale_number" -ge 1 ] && [ "$locale_number" -le "${#matching_locales[@]}" ]; then
+        locale="${matching_locales[$((locale_number-1))]}"
         sed -i "s/^# *$locale UTF-8/$locale UTF-8/" /etc/locale.gen
         locale-gen
         update-locale LANG=$locale
