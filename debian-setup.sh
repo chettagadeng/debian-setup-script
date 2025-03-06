@@ -37,9 +37,10 @@ done
 
 # Set Locale from List
 echo "Select a locale:"
-locales=$(locale -a | grep -E 'utf8|UTF-8')  # List available UTF-8 locales
-select locale in $locales; do
-    if [ -n "$locale" ]; then
+locales=($(locale -a | grep -E 'utf8|UTF-8'))  # Store locales in an array
+
+select locale in "${locales[@]}"; do
+    if [[ -n "$locale" ]]; then
         sed -i "s/^# *$locale UTF-8/$locale UTF-8/" /etc/locale.gen
         locale-gen
         update-locale LANG=$locale
