@@ -11,19 +11,26 @@ fi
 echo "Welcome to the Debian Server Setup Script"
 
 # Set Hostname
-read -p "Enter the desired hostname: " hostname
-hostnamectl set-hostname "$hostname"
-echo "Hostname set to $hostname"
+while true; do
+    read -p "Enter the desired hostname: " hostname
+    if [[ -n "$hostname" ]]; then
+        hostnamectl set-hostname "$hostname"
+        echo "Hostname set to $hostname"
+        
+        # Update /etc/hosts to reflect the new hostname
+        if grep -q "127.0.1.1" /etc/hosts; then
+            sed -i "s/^127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
+        else
+            echo "127.0.1.1 $hostname" >> /etc/hosts
+        fi
+        echo "Updated /etc/hosts with hostname $hostname"
+        break
+    else
+        echo "Hostname cannot be empty. Please try again."
+    fi
+done
 
-# Update /etc/hosts to reflect the new hostname
-if grep -q "127.0.1.1" /etc/hosts; then
-    sed -i "s/^127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
-else
-    echo "127.0.1.1 $hostname" >> /etc/hosts
-fi
-echo "Updated /etc/hosts with hostname $hostname"
-
-# Set Timezone with Search
+# Set Timezone with Filtering
 while true; do
     read -p "Enter part of your timezone (e.g., 'Europe' or 'Berlin') and press Enter: " tz_search
     matching_timezones=($(timedatectl list-timezones | grep -i "$tz_search"))
@@ -49,7 +56,7 @@ while true; do
     fi
 done
 
-# Set Locale with Search
+# Set Locale with Filtering
 while true; do
     read -p "Enter part of your preferred locale (e.g., 'en' or 'de') and press Enter: " locale_search
     matching_locales=($(locale -a | grep -i "$locale_search" | grep -E 'utf8|UTF-8'))
@@ -108,30 +115,6 @@ if [[ "$install_packages" =~ ^[Yy]$ ]]; then
     apt update
     apt install -y sudo curl wget ntp htop unattended-upgrades
     echo "Essential packages installed."
-fi
-
-# MOTD Setup
-read -p "Would you like to install a custom MOTD? (y/n): " install_motd
-if [[ "$install_motd" =~ ^[Yy]$ ]]; then
-    cat > /etc/profile.d/motd.sh <<'EOF'
-#!/bin/bash
-
-hostname=$(hostname)
-debian_version=$(cat /etc/debian_version)
-ip_address=$(hostname -I | cut -d ' ' -f 1)
-uptime=$(uptime -p)
-current_time=$(date +"%Y-%m-%d %H:%M:%S")
-disk_usage=$(df -h / | awk 'NR==2 {print "Usage: "$5"\tTotal: "$2"\tUsed: "$3"\tFree: "$4}')
-
-echo -e "\033[1;32m=== System Status ===\033[0m"
-echo -e "\033[1;34mHostname:\033[0m $hostname (Debian $debian_version)"
-echo -e "\033[1;34mIP Address:\033[0m $ip_address"
-echo -e "\033[1;34mUptime:\033[0m $uptime"
-echo -e "\033[1;34mCurrent Time:\033[0m $current_time"
-echo -e "\033[1;34mDisk Usage:\033[0m $disk_usage"
-EOF
-    chmod +x /etc/profile.d/motd.sh
-    echo "MOTD setup complete."
 fi
 
 # Install Docker
