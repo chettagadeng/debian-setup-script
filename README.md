@@ -3,7 +3,7 @@ Guided Debian Server Setup Script
 
 Usage:
     
-    curl -sSL https://raw.githubusercontent.com/Snake16547/debian-setup-script/refs/heads/main/debian-setup.sh | bash
+    wget https://raw.githubusercontent.com/Snake16547/debian-setup-script/refs/heads/main/debian-setup.sh && chmod +x debian-setup.sh && ./debian-setup.sh
     
 Features:
 
