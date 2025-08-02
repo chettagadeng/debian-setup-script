@@ -134,6 +134,33 @@ else
     echo "Unsupported architecture: $arch. Skipping Docker installation."
 fi
 
+# Option to install MOTD script
+read -p "Would you like to install a system status MOTD script? (y/n): " install_motd
+if [[ "$install_motd" =~ ^[Yy]$ ]]; then
+    cat > /etc/profile.d/motd.sh <<'EOF'
+#!/bin/bash
+
+# MOTD script for Debian systems
+
+hostname=$(hostname)
+debian_version=$(cat /etc/debian_version)
+ip_address=$(hostname -I | cut -d ' ' -f 1)
+uptime=$(uptime -p)
+current_time=$(date +"%Y-%m-%d %H:%M:%S")
+disk_usage=$(df -h / | awk 'NR==2 {print "Usage: "$5"\tTotal: "$2"\tUsed: "$3"\tFree: "$4}')
+
+echo -e "\033[1;32m=== System Status ===\033[0m"
+echo -e "\033[1;34mHostname:\033[0m $hostname (Debian $debian_version)"
+echo -e "\033[1;34mIP Address:\033[0m $ip_address"
+echo -e "\033[1;34mUptime:\033[0m $uptime"
+echo -e "\033[1;34mCurrent Time:\033[0m $current_time"
+echo -e "\033[1;34mDisk Usage:\033[0m $disk_usage"
+EOF
+
+    chmod +x /etc/profile.d/motd.sh
+    echo "MOTD script installed. It will be shown at login."
+fi
+
 # Final Setup Summary
 echo -e "\n\033[1;32m=== Setup Complete ===\033[0m"
 echo -e "\033[1;34mHostname:\033[0m $hostname"
@@ -143,6 +170,7 @@ echo -e "\033[1;34mSSH Port:\033[0m $ssh_port"
 echo -e "\033[1;34mEndlessh Installed:\033[0m $(if systemctl is-active --quiet endlessh; then echo "Yes (listening on port 22)"; else echo "No"; fi)"
 echo -e "\033[1;34mEssential Packages Installed:\033[0m $([[ "$install_packages" =~ ^[Yy]$ ]] && echo "Yes" || echo "No")"
 echo -e "\033[1;34mDocker Installed:\033[0m $(if systemctl is-active --quiet docker; then echo "Yes"; else echo "No"; fi)"
+echo -e "\033[1;34mMOTD Installed:\033[0m $([[ "$install_motd" =~ ^[Yy]$ ]] && echo "Yes" || echo "No")"
 
 # Prompt for Reboot
 read -p "Setup is complete. A reboot is recommended. Reboot now? (y/n): " reboot_now
