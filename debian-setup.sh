@@ -1,6 +1,26 @@
 #!/bin/bash
 
-# Guided Debian Server Setup Script
+# Guided Debian Server Setup Script with Dry Run Mode
+
+# Dry run flag
+DRY_RUN=false
+
+# Check for --dry-run flag
+for arg in "$@"; do
+    if [[ "$arg" == "--dry-run" ]]; then
+        DRY_RUN=true
+        echo -e "\033[1;33mDry run mode enabled. No commands will be executed.\033[0m"
+    fi
+done
+
+# Helper function to run or echo commands
+run_cmd() {
+    if $DRY_RUN; then
+        echo "[DRY RUN] $*"
+    else
+        eval "$@"
+    fi
+}
 
 # Ensure script is run as root
 if [ "$(id -u)" -ne 0 ]; then
@@ -10,18 +30,23 @@ fi
 
 echo "Welcome to the Debian Server Setup Script"
 
+# --- Update & Upgrade at the beginning ---
+echo -e "\n\033[1;34mUpdating package lists and upgrading installed packages...\033[0m"
+run_cmd apt-get update
+run_cmd apt-get upgrade -y
+echo -e "\033[1;32mSystem update & upgrade complete.\033[0m\n"
+
 # Set Hostname
 while true; do
     read -p "Enter the desired hostname: " hostname
     if [[ -n "$hostname" ]]; then
-        hostnamectl set-hostname "$hostname"
+        run_cmd hostnamectl set-hostname "$hostname"
         echo "Hostname set to $hostname"
         
-        # Update /etc/hosts to reflect the new hostname
         if grep -q "127.0.1.1" /etc/hosts; then
-            sed -i "s/^127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
+            run_cmd sed -i "s/^127.0.1.1.*/127.0.1.1 $hostname/" /etc/hosts
         else
-            echo "127.0.1.1 $hostname" >> /etc/hosts
+            run_cmd "echo '127.0.1.1 $hostname' >> /etc/hosts"
         fi
         echo "Updated /etc/hosts with hostname $hostname"
         break
@@ -32,9 +57,9 @@ done
 
 # Set Timezone with Filtering
 while true; do
-    read -p "Enter part of your timezone (e.g., 'Europe' or 'Berlin') and press Enter: " tz_search
+    read -p "Enter part of your timezone (e.g., 'Europe' or 'Berlin'): " tz_search
     matching_timezones=($(timedatectl list-timezones | grep -i "$tz_search"))
-
+    
     if [ ${#matching_timezones[@]} -eq 0 ]; then
         echo "No matching timezones found. Try again."
         continue
@@ -48,7 +73,7 @@ while true; do
     read -p "Enter the number of your desired timezone: " tz_number
     if [[ "$tz_number" =~ ^[0-9]+$ ]] && [ "$tz_number" -ge 1 ] && [ "$tz_number" -le "${#matching_timezones[@]}" ]; then
         timezone="${matching_timezones[$((tz_number-1))]}"
-        timedatectl set-timezone "$timezone"
+        run_cmd timedatectl set-timezone "$timezone"
         echo "Timezone set to $timezone"
         break
     else
@@ -58,7 +83,7 @@ done
 
 # Set Locale with Filtering
 while true; do
-    read -p "Enter part of your preferred locale (e.g., 'en' or 'de') and press Enter: " locale_search
+    read -p "Enter part of your preferred locale (e.g., 'en' or 'de'): " locale_search
     matching_locales=($(locale -a | grep -i "$locale_search" | grep -E 'utf8|UTF-8'))
 
     if [ ${#matching_locales[@]} -eq 0 ]; then
@@ -72,11 +97,11 @@ while true; do
     done
 
     read -p "Enter the number of your desired locale: " locale_number
-    if [[ "$locale_number" =~ ^[0-9]+$ ]] && [ "$locale_number" -ge 1 ] && [ "$locale_number" -le "${#matching_locales[@]}" ]; then
+    if [[ "$locale_number" =~ ^[0-9]+$ ]] && [ "$locale_number" -ge 1 ] && [ "$locale_number" -le "${#matching_locales[@]}" ]]; then
         locale="${matching_locales[$((locale_number-1))]}"
-        sed -i "s/^# *$locale UTF-8/$locale UTF-8/" /etc/locale.gen
-        locale-gen
-        update-locale LANG=$locale
+        run_cmd sed -i "s/^# *$locale UTF-8/$locale UTF-8/" /etc/locale.gen
+        run_cmd locale-gen
+        run_cmd update-locale LANG=$locale
         echo "Locale set to $locale"
         break
     else
@@ -87,33 +112,36 @@ done
 # Change SSH Port
 read -p "Enter new SSH port (default: 22): " ssh_port
 ssh_port=${ssh_port:-22}
-sed -i "s/^#Port 22/Port $ssh_port/" /etc/ssh/sshd_config
+run_cmd sed -i "s/^#Port 22/Port $ssh_port/" /etc/ssh/sshd_config
 echo "SSH port set to $ssh_port"
 
 # Option to install Endlessh as SSH honeypot on port 22
-read -p "Would you like to install Endlessh to act as an SSH honeypot on port 22? (y/n): " install_endlessh
+read -p "Would you like to install Endlessh as SSH honeypot on port 22? (y/n): " install_endlessh
 if [[ "$install_endlessh" =~ ^[Yy]$ ]]; then
     echo "Installing Endlessh..."
-    apt install -y endlessh
+    run_cmd apt install -y endlessh
 
-    # Configure Endlessh to listen on port 22
-    cat > /etc/endlessh/config <<EOF
+    if ! $DRY_RUN; then
+        cat > /etc/endlessh/config <<EOF
 Port 22
 Delay 10000
 MaxLineLength 32
 LogLevel 1
 EOF
+    else
+        echo "[DRY RUN] Writing Endlessh config to /etc/endlessh/config"
+    fi
 
-    systemctl enable --now endlessh
-    echo "Endlessh installed and configured to listen on port 22."
+    run_cmd systemctl enable --now endlessh
+    echo "Endlessh installed and configured."
 fi
 
 # Option to install Essential Packages
-read -p "Would you like to install essential system packages? (y/n): " install_packages
+read -p "Install essential system packages (curl, htop, etc)? (y/n): " install_packages
 if [[ "$install_packages" =~ ^[Yy]$ ]]; then
     echo "Installing essential packages..."
-    apt update
-    apt install -y sudo curl wget ntp htop unattended-upgrades
+    run_cmd apt update
+    run_cmd apt install -y sudo curl wget ntp htop unattended-upgrades
     echo "Essential packages installed."
 fi
 
@@ -122,26 +150,30 @@ echo "Checking system architecture..."
 arch=$(dpkg --print-architecture)
 if [[ "$arch" == "amd64" || "$arch" == "arm64" || "$arch" == "armhf" ]]; then
     echo "Installing Docker..."
-    apt install -y apt-transport-https ca-certificates curl gnupg
-    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=$arch signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" \
-        | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt update
-    apt install -y docker-ce docker-ce-cli containerd.io
-    systemctl enable --now docker
-    echo "Docker installed successfully."
+    run_cmd apt install -y apt-transport-https ca-certificates curl gnupg
+    run_cmd curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    if ! $DRY_RUN; then
+        echo "deb [arch=$arch signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" \
+            | tee /etc/apt/sources.list.d/docker.list > /dev/null
+    else
+        echo "[DRY RUN] Adding Docker repo for arch $arch"
+    fi
+
+    run_cmd apt update
+    run_cmd apt install -y docker-ce docker-ce-cli containerd.io
+    run_cmd systemctl enable --now docker
+    echo "Docker installed."
 else
     echo "Unsupported architecture: $arch. Skipping Docker installation."
 fi
 
-# Option to install MOTD script
+# MOTD script setup
 read -p "Would you like to install a system status MOTD script? (y/n): " install_motd
 if [[ "$install_motd" =~ ^[Yy]$ ]]; then
-    cat > /etc/profile.d/motd.sh <<'EOF'
+    if ! $DRY_RUN; then
+        cat > /etc/profile.d/motd.sh <<'EOF'
 #!/bin/bash
-
-# MOTD script for Debian systems
-
 hostname=$(hostname)
 debian_version=$(cat /etc/debian_version)
 ip_address=$(hostname -I | cut -d ' ' -f 1)
@@ -156,9 +188,11 @@ echo -e "\033[1;34mUptime:\033[0m $uptime"
 echo -e "\033[1;34mCurrent Time:\033[0m $current_time"
 echo -e "\033[1;34mDisk Usage:\033[0m $disk_usage"
 EOF
-
-    chmod +x /etc/profile.d/motd.sh
-    echo "MOTD script installed. It will be shown at login."
+        run_cmd chmod +x /etc/profile.d/motd.sh
+    else
+        echo "[DRY RUN] Writing MOTD script to /etc/profile.d/motd.sh"
+    fi
+    echo "MOTD script setup complete."
 fi
 
 # Final Setup Summary
@@ -167,16 +201,20 @@ echo -e "\033[1;34mHostname:\033[0m $hostname"
 echo -e "\033[1;34mTimezone:\033[0m $timezone"
 echo -e "\033[1;34mLocale:\033[0m $locale"
 echo -e "\033[1;34mSSH Port:\033[0m $ssh_port"
-echo -e "\033[1;34mEndlessh Installed:\033[0m $(if systemctl is-active --quiet endlessh; then echo "Yes (listening on port 22)"; else echo "No"; fi)"
+echo -e "\033[1;34mEndlessh Installed:\033[0m $(if systemctl is-active --quiet endlessh; then echo "Yes"; else echo "No"; fi)"
 echo -e "\033[1;34mEssential Packages Installed:\033[0m $([[ "$install_packages" =~ ^[Yy]$ ]] && echo "Yes" || echo "No")"
 echo -e "\033[1;34mDocker Installed:\033[0m $(if systemctl is-active --quiet docker; then echo "Yes"; else echo "No"; fi)"
 echo -e "\033[1;34mMOTD Installed:\033[0m $([[ "$install_motd" =~ ^[Yy]$ ]] && echo "Yes" || echo "No")"
 
-# Prompt for Reboot
-read -p "Setup is complete. A reboot is recommended. Reboot now? (y/n): " reboot_now
-if [[ "$reboot_now" =~ ^[Yy]$ ]]; then
-    echo "Rebooting system..."
-    reboot
+# Reboot Prompt
+if $DRY_RUN; then
+    echo -e "\n[DRY RUN] Skipping reboot prompt."
 else
-    echo "Setup complete. Please reboot your system manually for all changes to take effect."
+    read -p "Setup is complete. A reboot is recommended. Reboot now? (y/n): " reboot_now
+    if [[ "$reboot_now" =~ ^[Yy]$ ]]; then
+        echo "Rebooting system..."
+        run_cmd reboot
+    else
+        echo "Setup complete. Please reboot manually."
+    fi
 fi
