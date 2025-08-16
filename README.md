@@ -5,6 +5,10 @@ Usage:
     
     wget https://raw.githubusercontent.com/Snake16547/debian-setup-script/refs/heads/main/debian-setup.sh && sudo chmod +x debian-setup.sh && ./debian-setup.sh
     
+For the dry run mode add:
+
+    --dry_mode
+
 Features:
 
 ✅ Interactive prompts for hostname with /etc/hosts, timezone, locale, and SSH port
