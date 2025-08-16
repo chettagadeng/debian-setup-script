@@ -7,7 +7,7 @@ Usage:
     
 For the dry run mode add:
 
-    --dry_mode
+    --dry-run
 
 Features:
 
