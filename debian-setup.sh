@@ -254,8 +254,9 @@ local locale_search matching_locales locale locale_number
 # Install locales package if missing
 dpkg-query --show --showformat='${db:Status-Status}\n' 'locales' > /dev/null 2>&1
 if [[ $? -eq 0 ]]; then
-    log "WARN" "Package 'locale' missing, installing..."
-    apt install locales -y
+    log "WARN" "Package 'locales' missing, installing..."
+    apt update > /dev/null
+    apt install locales -yq > /dev/null
 fi
 
 while true; do
