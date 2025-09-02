@@ -253,7 +253,7 @@ local locales_installed locale_search matching_locales locale locale_number
 
 # Install locales package if missing
 ( ( dpkg -l locales 2>&1 ) | grep -E '^ii' > /dev/null ) || locales_installed=false
-if [[ -v $locales_installed ]]; then
+if [[ -v locales_installed ]]; then
     log "WARN" "Package 'locales' missing, installing..."
     apt-get install locales -yq > /dev/null
 fi
@@ -319,7 +319,7 @@ install_ssh() {
 local ssh_installed install_ssh
 
 (( dpkg -l openssh-server 2>&1 ) | grep -E '^ii' > /dev/null) || ssh_installed=false
-if [[ $ssh_installed -eq false ]]; then
+if [[ -v ssh_installed ]]; then
     read -p "Would you like to install openssh-server? (y/n): " install_ssh
 fi
 
