@@ -112,11 +112,11 @@ fi
 parse_args() {
 for arg in "$@"; do
 case "$arg" in
--dry-run)
+--dry-run)
 DRY_RUN=true
 echo -e "${YELLOW}Dry run mode enabled. No commands will be executed.${NC}"
 ;;
--help|-h)
+--help|-h)
 show_help
 exit 0
 ;;
@@ -131,8 +131,8 @@ Debian Server Setup Script v2.0
 Usage: $0 [OPTIONS]
 
 Options:
--dry-run    Show what would be executed without making changes
--help, -h   Show this help message
+--dry-run    Show what would be executed without making changes
+--help, -h   Show this help message
 
 Features:
 
@@ -339,8 +339,8 @@ if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
             return 1
         }
 
-        run_cmd "systemctl enable sshd"
-        run_cmd "systemctl start sshd"
+        #run_cmd "systemctl enable sshd"
+        #run_cmd "systemctl start sshd"
         log "SUCCESS" "openssh-server installed and configured"
         return 0
     else
