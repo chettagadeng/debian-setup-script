@@ -331,8 +331,8 @@ if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
         return 1
     }
 
-    run_cmd "systemctl enable openssh-server"
-    run_cmd "systemctl start openssh-server"
+    run_cmd "systemctl enable sshd"
+    run_cmd "systemctl start sshd"
     log "SUCCESS" "openssh-server installed and configured"
     return 0
 fi
