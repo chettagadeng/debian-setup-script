@@ -28,7 +28,7 @@ shift
 local message="$*"
 local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
-```
+
 if ! $DRY_RUN; then
     echo "[$timestamp] [$level] $message" | tee -a "$SCRIPT_LOG"
 fi
@@ -39,7 +39,7 @@ case $level in
     "INFO")  echo -e "${BLUE}[INFO]${NC} $message" ;;
     "SUCCESS") echo -e "${GREEN}[SUCCESS]${NC} $message" ;;
 esac
-```
+
 
 }
 
@@ -48,7 +48,7 @@ esac
 run_cmd() {
 local cmd="$*"
 
-```
+
 if $DRY_RUN; then
     echo -e "${YELLOW}[DRY RUN]${NC} $cmd"
     return 0
@@ -64,7 +64,7 @@ else
     log "ERROR" "Command failed with exit code $exit_code: $cmd"
     return $exit_code
 fi
-```
+
 
 }
 
@@ -74,13 +74,13 @@ backup_file() {
 local file="$1"
 local backup_name="${file##*/}.backup.$(date +%s)"
 
-```
+
 if [[ -f "$file" ]] && ! $DRY_RUN; then
     mkdir -p "$BACKUP_DIR"
     cp "$file" "$BACKUP_DIR/$backup_name"
     log "INFO" "Backed up $file to $BACKUP_DIR/$backup_name"
 fi
-```
+
 
 }
 
@@ -152,7 +152,7 @@ EOF
 update_system() {
 log "INFO" "Updating package lists and upgrading installed packages…"
 
-```
+
 run_cmd "apt-get update" || {
     log "ERROR" "Failed to update package lists"
     return 1
@@ -164,7 +164,7 @@ run_cmd "DEBIAN_FRONTEND=noninteractive apt-get upgrade -y" || {
 }
 
 log "SUCCESS" "System update and upgrade complete"
-```
+
 
 }
 
@@ -173,7 +173,7 @@ log "SUCCESS" "System update and upgrade complete"
 configure_hostname() {
 local hostname
 
-```
+
 while true; do
     read -p "Enter the desired hostname: " hostname
     
@@ -201,7 +201,7 @@ while true; do
         log "ERROR" "Invalid hostname. Must be 1-63 characters, alphanumeric and hyphens only, cannot start/end with hyphen."
     fi
 done
-```
+
 
 }
 
@@ -210,7 +210,7 @@ done
 configure_timezone() {
 local tz_search matching_timezones timezone tz_number
 
-```
+
 while true; do
     read -p "Enter part of your timezone (e.g., 'Europe' or 'Berlin'): " tz_search
     
@@ -242,7 +242,7 @@ while true; do
         log "ERROR" "Invalid selection. Please enter a number between 1 and ${#matching_timezones[@]}"
     fi
 done
-```
+
 
 }
 
@@ -251,7 +251,7 @@ done
 configure_locale() {
 local locale_search matching_locales locale locale_number
 
-```
+
 while true; do
     read -p "Enter part of your preferred locale (e.g., 'en' or 'de'): " locale_search
     
@@ -303,7 +303,7 @@ while true; do
         log "ERROR" "Invalid selection. Please enter a number between 1 and ${#matching_locales[@]}"
     fi
 done
-```
+
 
 }
 
@@ -312,7 +312,7 @@ done
 configure_ssh() {
 local ssh_port current_port connection_check
 
-```
+
 # Detect if we're running over SSH
 if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ "$XDG_SESSION_TYPE" == "tty" && -n "$(who am i | grep pts)" ]]; then
     connection_check=true
@@ -390,7 +390,7 @@ else
 fi
 
 log "SUCCESS" "SSH port configured to $ssh_port"
-```
+
 
 }
 
@@ -399,7 +399,7 @@ log "SUCCESS" "SSH port configured to $ssh_port"
 install_endlessh() {
 local install_endlessh
 
-```
+
 read -p "Would you like to install Endlessh as SSH honeypot on port 22? (y/n): " install_endlessh
 
 if [[ "$install_endlessh" =~ ^[Yy]$ ]]; then
@@ -415,7 +415,6 @@ if [[ "$install_endlessh" =~ ^[Yy]$ ]]; then
     
     if ! $DRY_RUN; then
         cat > /etc/endlessh/config <<EOF
-```
 
 # Endlessh SSH honeypot configuration
 
@@ -430,7 +429,7 @@ else
 echo -e "${YELLOW}[DRY RUN]${NC} Would write Endlessh config to /etc/endlessh/config"
 fi
 
-```
+
     run_cmd "systemctl enable endlessh"
     run_cmd "systemctl start endlessh"
     log "SUCCESS" "Endlessh installed and configured"
@@ -438,7 +437,7 @@ fi
 fi
 
 return 1
-```
+
 
 }
 
@@ -447,7 +446,7 @@ return 1
 install_essential_packages() {
 local install_packages
 
-```
+
 read -p "Install essential system packages (sudo, curl, wget, ntp, htop, unattended-upgrades)? (y/n): " install_packages
 
 if [[ "$install_packages" =~ ^[Yy]$ ]]; then
@@ -462,7 +461,7 @@ if [[ "$install_packages" =~ ^[Yy]$ ]]; then
     if ! $DRY_RUN; then
         if [[ ! -f "/etc/apt/apt.conf.d/20auto-upgrades" ]]; then
             cat > /etc/apt/apt.conf.d/20auto-upgrades <<EOF
-```
+
 
 APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "1";
@@ -473,13 +472,13 @@ else
 echo -e "${YELLOW}[DRY RUN]${NC} Would configure unattended upgrades"
 fi
 
-```
+
     log "SUCCESS" "Essential packages installed and configured"
     return 0
 fi
 
 return 1
-```
+
 
 }
 
@@ -488,7 +487,7 @@ return 1
 install_docker() {
 local install_docker arch
 
-```
+
 read -p "Would you like to install Docker? (y/n): " install_docker
 
 if [[ ! "$install_docker" =~ ^[Yy]$ ]]; then
@@ -535,7 +534,7 @@ run_cmd "systemctl start docker"
 
 log "SUCCESS" "Docker installed and started"
 return 0
-```
+
 
 }
 
@@ -544,13 +543,13 @@ return 0
 install_motd() {
 local install_motd
 
-```
+
 read -p "Would you like to install a system status MOTD script? (y/n): " install_motd
 
 if [[ "$install_motd" =~ ^[Yy]$ ]]; then
     if ! $DRY_RUN; then
         cat > /etc/profile.d/motd.sh <<'EOF'
-```
+
 
 #!/bin/bash
 
@@ -603,7 +602,7 @@ echo ""
 EOF
 chmod +x /etc/profile.d/motd.sh
 
-```
+
         # Disable default Debian MOTD
         if [[ -f "/etc/motd" ]]; then
             mv /etc/motd /etc/motd.disabled
@@ -617,7 +616,7 @@ chmod +x /etc/profile.d/motd.sh
 fi
 
 return 1
-```
+
 
 }
 
@@ -626,7 +625,7 @@ return 1
 show_summary() {
 local hostname timezone locale ssh_port endlessh_status docker_status packages_status motd_status
 
-```
+
 hostname=$(hostname 2>/dev/null || echo "Unknown")
 timezone=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "Unknown")
 locale=$(locale | grep LANG= | cut -d= -f2 2>/dev/null || echo "Unknown")
@@ -649,7 +648,7 @@ echo -e "${BLUE}Endlessh Status:${NC} $endlessh_status"
 echo -e "${BLUE}Docker Status:${NC} $docker_status"
 echo -e "${BLUE}Log File:${NC} $SCRIPT_LOG"
 echo -e "${BLUE}Backup Directory:${NC} $BACKUP_DIR"
-```
+
 
 }
 
@@ -660,7 +659,7 @@ echo -e "${GREEN}Welcome to the Enhanced Debian Server Setup Script v2.0${NC}"
 echo "This script will configure your Debian server with improved security and error handling."
 echo ""
 
-```
+
 # Initialize logging
 if ! $DRY_RUN; then
     mkdir -p "$(dirname "$SCRIPT_LOG")"
@@ -721,7 +720,7 @@ if ! $DRY_RUN; then
 else
     echo -e "\n${YELLOW}[DRY RUN] Setup simulation complete. No reboot needed.${NC}"
 fi
-```
+
 
 }
 
