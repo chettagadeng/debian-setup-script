@@ -480,12 +480,12 @@ install_essential_packages() {
 local install_packages
 
 
-read -p "Install essential system packages (sudo, curl, wget, ntp, htop, unattended-upgrades)? (y/n): " install_packages
+read -p "Install essential system packages (sudo, curl, wget, ntp, htop, btop, byobu, unattended-upgrades)? (y/n): " install_packages
 
 if [[ "$install_packages" =~ ^[Yy]$ ]]; then
     log "INFO" "Installing essential packages..."
     
-    run_cmd "DEBIAN_FRONTEND=noninteractive apt install -y sudo curl wget ntp htop unattended-upgrades apt-transport-https ca-certificates gnupg lsb-release" || {
+    run_cmd "DEBIAN_FRONTEND=noninteractive apt install -y sudo curl wget ntp htop btop byobu unattended-upgrades apt-transport-https ca-certificates gnupg lsb-release" || {
         log "ERROR" "Failed to install essential packages"
         return 1
     }
