@@ -253,7 +253,7 @@ local locales_installed locale_search matching_locales locale locale_number
 
 # Install locales package if missing
 ( ( dpkg -l locales 2>&1 ) | grep -E '^ii' > /dev/null ) || locales_installed=false
-if [[ $locales_installed -eq false ]]; then
+if [[ -v $locales_installed ]]; then
     log "WARN" "Package 'locales' missing, installing..."
     apt-get install locales -yq > /dev/null
 fi
