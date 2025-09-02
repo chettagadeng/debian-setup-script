@@ -337,9 +337,6 @@ if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
     return 0
 fi
 
-return 1
-
-
 }
 
 # Configure SSH
