@@ -251,6 +251,12 @@ done
 configure_locale() {
 local locale_search matching_locales locale locale_number
 
+# Install locales package if missing
+dpkg-query --show --showformat='${db:Status-Status}\n' 'locales' > /dev/null 2>&1
+if [[ $? -eq 0 ]]; then
+    log "WARN" "Package 'locale' missing, installing..."
+    apt install locales -y
+fi
 
 while true; do
     read -p "Enter part of your preferred locale (e.g., 'en' or 'de'): " locale_search
