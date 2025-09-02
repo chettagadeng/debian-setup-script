@@ -9,24 +9,24 @@ set -euo pipefail  # Exit on error, undefined vars, and pipe failures
 # Global variables
 
 DRY_RUN=false
-SCRIPT_LOG=”/var/log/debian-setup.log”
-BACKUP_DIR=”/root/debian-setup-backups”
+SCRIPT_LOG="/var/log/debian-setup.log"
+BACKUP_DIR="/root/debian-setup-backups"
 
 # Color codes for output
 
-RED=’\033[0;31m’
-GREEN=’\033[0;32m’
-YELLOW=’\033[1;33m’
-BLUE=’\033[1;34m’
-NC=’\033[0m’ # No Color
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+NC='\033[0m' # No Color
 
 # Logging function
 
 log() {
-local level=”$1”
+local level="$1"
 shift
-local message=”$*”
-local timestamp=$(date ‘+%Y-%m-%d %H:%M:%S’)
+local message="$*"
+local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
 ```
 if ! $DRY_RUN; then
@@ -46,7 +46,7 @@ esac
 # Enhanced command execution with error handling
 
 run_cmd() {
-local cmd=”$*”
+local cmd="$*"
 
 ```
 if $DRY_RUN; then
@@ -71,8 +71,8 @@ fi
 # Safe file backup function
 
 backup_file() {
-local file=”$1”
-local backup_name=”${file##*/}.backup.$(date +%s)”
+local file="$1"
+local backup_name="${file##*/}.backup.$(date +%s)"
 
 ```
 if [[ -f "$file" ]] && ! $DRY_RUN; then
@@ -87,13 +87,13 @@ fi
 # Validate port number
 
 validate_port() {
-local port=”$1”
-if [[ ! “$port” =~ ^[0-9]+$ ]] || [ “$port” -lt 1 ] || [ “$port” -gt 65535 ]; then
+local port="$1"
+if [[ ! "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
 return 1
 fi
 # Warn about well-known ports
-if [ “$port” -lt 1024 ] && [ “$port” -ne 22 ]; then
-echo -e “${YELLOW}Warning: Port $port is a well-known port and may conflict with other services.${NC}”
+if [ "$port" -lt 1024 ] && [ "$port" -ne 22 ]; then
+echo -e "${YELLOW}Warning: Port $port is a well-known port and may conflict with other services.${NC}"
 fi
 return 0
 }
@@ -101,8 +101,8 @@ return 0
 # Check if running as root
 
 check_root() {
-if [ “$(id -u)” -ne 0 ]; then
-log “ERROR” “This script must be run as root.”
+if [ "$(id -u)" -ne 0 ]; then
+log "ERROR" "This script must be run as root."
 exit 1
 fi
 }
@@ -110,13 +110,13 @@ fi
 # Parse command line arguments
 
 parse_args() {
-for arg in “$@”; do
-case “$arg” in
-–dry-run)
+for arg in "$@"; do
+case "$arg" in
+-dry-run)
 DRY_RUN=true
-echo -e “${YELLOW}Dry run mode enabled. No commands will be executed.${NC}”
+echo -e "${YELLOW}Dry run mode enabled. No commands will be executed.${NC}"
 ;;
-–help|-h)
+-help|-h)
 show_help
 exit 0
 ;;
@@ -131,8 +131,8 @@ Debian Server Setup Script v2.0
 Usage: $0 [OPTIONS]
 
 Options:
-–dry-run    Show what would be executed without making changes
-–help, -h   Show this help message
+-dry-run    Show what would be executed without making changes
+-help, -h   Show this help message
 
 Features:
 
@@ -150,7 +150,7 @@ EOF
 # System update with error handling
 
 update_system() {
-log “INFO” “Updating package lists and upgrading installed packages…”
+log "INFO" "Updating package lists and upgrading installed packages…"
 
 ```
 run_cmd "apt-get update" || {
@@ -427,7 +427,7 @@ LogLevel 1
 KeepaliveTime 3600
 EOF
 else
-echo -e “${YELLOW}[DRY RUN]${NC} Would write Endlessh config to /etc/endlessh/config”
+echo -e "${YELLOW}[DRY RUN]${NC} Would write Endlessh config to /etc/endlessh/config"
 fi
 
 ```
@@ -464,13 +464,13 @@ if [[ "$install_packages" =~ ^[Yy]$ ]]; then
             cat > /etc/apt/apt.conf.d/20auto-upgrades <<EOF
 ```
 
-APT::Periodic::Update-Package-Lists “1”;
-APT::Periodic::Unattended-Upgrade “1”;
-APT::Periodic::AutocleanInterval “7”;
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
 EOF
 fi
 else
-echo -e “${YELLOW}[DRY RUN]${NC} Would configure unattended upgrades”
+echo -e "${YELLOW}[DRY RUN]${NC} Would configure unattended upgrades"
 fi
 
 ```
@@ -561,45 +561,45 @@ if [[ "$install_motd" =~ ^[Yy]$ ]]; then
 # Get system information
 
 hostname=$(hostname)
-debian_version=$(cat /etc/debian_version 2>/dev/null || echo “Unknown”)
-ip_address=$(hostname -I 2>/dev/null | cut -d ’ ’ -f 1 || echo “Unknown”)
-uptime=$(uptime -p 2>/dev/null || echo “Unknown”)
-current_time=$(date +”%Y-%m-%d %H:%M:%S” 2>/dev/null || echo “Unknown”)
-load_avg=$(uptime | awk -F’load average:’ ‘{print $2}’ | xargs 2>/dev/null || echo “Unknown”)
+debian_version=$(cat /etc/debian_version 2>/dev/null || echo "Unknown")
+ip_address=$(hostname -I 2>/dev/null | cut -d ' ' -f 1 || echo "Unknown")
+uptime=$(uptime -p 2>/dev/null || echo "Unknown")
+current_time=$(date +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "Unknown")
+load_avg=$(uptime | awk -F'load average:' '{print $2}' | xargs 2>/dev/null || echo "Unknown")
 
 # Disk usage with error handling
 
 if command -v df >/dev/null 2>&1; then
-disk_usage=$(df -h / 2>/dev/null | awk ‘NR==2 {print “Used: “$3”/”$2” (”$5”)”}’ || echo “Unknown”)
+disk_usage=$(df -h / 2>/dev/null | awk 'NR==2 {print "Used: "$3"/"$2" ("$5")"}' || echo "Unknown")
 else
-disk_usage=“Unknown”
+disk_usage="Unknown"
 fi
 
 # Memory usage
 
 if command -v free >/dev/null 2>&1; then
-memory_usage=$(free -h | awk ‘/^Mem:/ {print “Used: “$3”/”$2” (“int($3/$2*100)”%)”}’ 2>/dev/null || echo “Unknown”)
+memory_usage=$(free -h | awk '/^Mem:/ {print "Used: "$3"/"$2" ("int($3/$2*100)"%)"}' 2>/dev/null || echo "Unknown")
 else
-memory_usage=“Unknown”
+memory_usage="Unknown"
 fi
 
-echo -e “\033[1;32m=== System Status ===\033[0m”
-echo -e “\033[1;34mHostname:\033[0m $hostname (Debian $debian_version)”
-echo -e “\033[1;34mIP Address:\033[0m $ip_address”
-echo -e “\033[1;34mUptime:\033[0m $uptime”
-echo -e “\033[1;34mLoad Average:\033[0m $load_avg”
-echo -e “\033[1;34mCurrent Time:\033[0m $current_time”
-echo -e “\033[1;34mDisk Usage:\033[0m $disk_usage”
-echo -e “\033[1;34mMemory Usage:\033[0m $memory_usage”
+echo -e "\033[1;32m=== System Status ===\033[0m"
+echo -e "\033[1;34mHostname:\033[0m $hostname (Debian $debian_version)"
+echo -e "\033[1;34mIP Address:\033[0m $ip_address"
+echo -e "\033[1;34mUptime:\033[0m $uptime"
+echo -e "\033[1;34mLoad Average:\033[0m $load_avg"
+echo -e "\033[1;34mCurrent Time:\033[0m $current_time"
+echo -e "\033[1;34mDisk Usage:\033[0m $disk_usage"
+echo -e "\033[1;34mMemory Usage:\033[0m $memory_usage"
 
 # Show last login
 
 if command -v last >/dev/null 2>&1; then
-last_login=$(last -n 2 -w | head -2 | tail -1 | awk ‘{print $1” from “$3” on “$4” “$5” “$6}’ 2>/dev/null || echo “Unknown”)
-echo -e “\033[1;34mLast Login:\033[0m $last_login”
+last_login=$(last -n 2 -w | head -2 | tail -1 | awk '{print $1" from "$3" on "$4" "$5" "$6}' 2>/dev/null || echo "Unknown")
+echo -e "\033[1;34mLast Login:\033[0m $last_login"
 fi
 
-echo “”
+echo ""
 EOF
 chmod +x /etc/profile.d/motd.sh
 
@@ -656,9 +656,9 @@ echo -e "${BLUE}Backup Directory:${NC} $BACKUP_DIR"
 # Main execution flow
 
 main() {
-echo -e “${GREEN}Welcome to the Enhanced Debian Server Setup Script v2.0${NC}”
-echo “This script will configure your Debian server with improved security and error handling.”
-echo “”
+echo -e "${GREEN}Welcome to the Enhanced Debian Server Setup Script v2.0${NC}"
+echo "This script will configure your Debian server with improved security and error handling."
+echo ""
 
 ```
 # Initialize logging
@@ -727,15 +727,15 @@ fi
 
 # Script entry point
 
-parse_args “$@”
+parse_args "$@"
 check_root
 
 # Set up error handling
 
-trap ‘log “ERROR” “Script interrupted”; exit 1’ INT TERM
+trap 'log "ERROR" "Script interrupted"; exit 1' INT TERM
 
 # Run main function
 
 main
 
-log “SUCCESS” “Script execution completed successfully”
+log "SUCCESS" "Script execution completed successfully"
