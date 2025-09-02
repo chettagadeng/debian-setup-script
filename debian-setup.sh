@@ -346,7 +346,7 @@ local ssh_installed ssh_port current_port connection_check
 
 (( dpkg -l openssh-server 2>&1 ) | grep -E '^ii' > /dev/null) && ssh_installed=true
 
-if [ -v $ssh_installed ]; then
+if [[ -v ssh_installed ]]; then
     # Detect if we're running over SSH
     if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ "$XDG_SESSION_TYPE" == "tty" && -n "$(who am i | grep pts)" ]]; then
         connection_check=true
