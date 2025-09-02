@@ -328,24 +328,25 @@ local ssh_installed install_ssh
 (( dpkg -l openssh-server 2>&1 ) | grep -E '^ii' > /dev/null) || ssh_installed=false
 if [[ -v ssh_installed ]]; then
     read -p "Would you like to install openssh-server? (y/n): " install_ssh
-fi
 
-if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
-    if ! $DRY_RUN; then
-        log "INFO" "Installing openssh-server..."
-        
-        run_cmd "apt-get install -yq openssh-server" || {
-            log "ERROR" "Failed to install openssh-server"
-            return 1
-        }
+    if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
+        if ! $DRY_RUN; then
+            log "INFO" "Installing openssh-server..."
+            
+            run_cmd "apt-get install -yq openssh-server" || {
+                log "ERROR" "Failed to install openssh-server"
+                return 1
+            }
 
-        #run_cmd "systemctl enable sshd"
-        #run_cmd "systemctl start sshd"
-        log "SUCCESS" "openssh-server installed and configured"
-        return 0
-    else
-        echo -e "${YELLOW}[DRY RUN]${NC} Would install package openssh-server"
+            #run_cmd "systemctl enable sshd"
+            #run_cmd "systemctl start sshd"
+            log "SUCCESS" "openssh-server installed and configured"
+            return 0
+        else
+            echo -e "${YELLOW}[DRY RUN]${NC} Would install package openssh-server"
+        fi
     fi
+
 fi
 
 }
