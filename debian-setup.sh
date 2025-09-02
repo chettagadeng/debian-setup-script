@@ -255,7 +255,14 @@ local locales_installed locale_search matching_locales locale locale_number
 ( ( dpkg -l locales 2>&1 ) | grep -E '^ii' > /dev/null ) || locales_installed=false
 if [[ -v locales_installed ]]; then
     log "WARN" "Package 'locales' missing, installing..."
-    apt-get install locales -yq > /dev/null
+    if ! $DRY_RUN; then
+        run_cmd "apt-get install -yq locales" || {
+            log "ERROR" "Failed to install locales"
+            return 1
+        }
+    else
+        echo -e "${YELLOW}[DRY RUN]${NC} Would install locales package"
+    fi
 fi
 
 while true; do
@@ -324,17 +331,21 @@ if [[ -v ssh_installed ]]; then
 fi
 
 if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
-    log "INFO" "Installing openssh-server..."
-    
-    run_cmd "apt install -y openssh-server" || {
-        log "ERROR" "Failed to install openssh-server"
-        return 1
-    }
+    if ! $DRY_RUN; then
+        log "INFO" "Installing openssh-server..."
+        
+        run_cmd "apt-get install -yq openssh-server" || {
+            log "ERROR" "Failed to install openssh-server"
+            return 1
+        }
 
-    run_cmd "systemctl enable sshd"
-    run_cmd "systemctl start sshd"
-    log "SUCCESS" "openssh-server installed and configured"
-    return 0
+        run_cmd "systemctl enable sshd"
+        run_cmd "systemctl start sshd"
+        log "SUCCESS" "openssh-server installed and configured"
+        return 0
+    else
+        echo -e "${YELLOW}[DRY RUN]${NC} Would install package openssh-server"
+    fi
 fi
 
 }
