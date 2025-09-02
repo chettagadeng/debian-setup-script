@@ -249,13 +249,13 @@ done
 # Configure locale
 
 configure_locale() {
-local locale_search matching_locales locale locale_number
+local locales_installed locale_search matching_locales locale locale_number
 
 # Install locales package if missing
-dpkg-query --show --showformat='${db:Status-Status}\n' 'locales' > /dev/null 2>&1
-if [[ $? -eq 0 ]]; then
+( ( dpkg -l locales 2>&1 ) | grep -E '^ii' > /dev/null ) || locales_installed=false
+if [[ $locales_installed -eq false ]]; then
     log "WARN" "Package 'locales' missing, installing..."
-    apt install locales -yq > /dev/null
+    apt-get install locales -yq > /dev/null
 fi
 
 while true; do
@@ -313,90 +313,123 @@ done
 
 }
 
-# Configure SSH
+# Install SSH
 
-configure_ssh() {
-local ssh_port current_port connection_check
+install_ssh() {
+local ssh_installed install_ssh
 
-
-# Detect if we're running over SSH
-if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ "$XDG_SESSION_TYPE" == "tty" && -n "$(who am i | grep pts)" ]]; then
-    connection_check=true
-    log "WARN" "SSH connection detected. SSH service restart will be deferred to prevent disconnection."
-else
-    connection_check=false
+(( dpkg -l openssh-server 2>&1 ) | grep -E '^ii' > /dev/null) || ssh_installed=false
+if [[ $ssh_installed -eq false ]]; then
+    read -p "Would you like to install openssh-server? (y/n): " install_ssh
 fi
 
-current_port=$(grep -E '^Port|^#Port' /etc/ssh/sshd_config | head -1 | awk '{print $2}' 2>/dev/null || echo '22')
-
-while true; do
-    read -p "Enter new SSH port (default: 22, current: $current_port): " ssh_port
-    ssh_port=${ssh_port:-22}
+if [[ "$install_ssh" =~ ^[Yy]$ ]]; then
+    log "INFO" "Installing openssh-server..."
     
-    if validate_port "$ssh_port"; then
-        break
-    else
-        log "ERROR" "Invalid port number. Please enter a number between 1 and 65535."
-    fi
-done
+    run_cmd "apt install -y openssh-server" || {
+        log "ERROR" "Failed to install openssh-server"
+        return 1
+    }
 
-# If port unchanged, skip configuration
-if [[ "$ssh_port" == "$current_port" ]]; then
-    log "INFO" "SSH port unchanged ($ssh_port). Skipping SSH configuration."
+    run_cmd "systemctl enable openssh-server"
+    run_cmd "systemctl start openssh-server"
+    log "SUCCESS" "openssh-server installed and configured"
     return 0
 fi
 
-backup_file "/etc/ssh/sshd_config"
+return 1
 
-if ! $DRY_RUN; then
-    # Handle both commented and uncommented Port lines
-    if grep -q "^Port " /etc/ssh/sshd_config; then
-        sed -i "s/^Port .*/Port $ssh_port/" /etc/ssh/sshd_config
-    elif grep -q "^#Port " /etc/ssh/sshd_config; then
-        sed -i "s/^#Port .*/Port $ssh_port/" /etc/ssh/sshd_config
+
+}
+
+# Configure SSH
+
+configure_ssh() {
+local ssh_installed ssh_port current_port connection_check
+
+(( dpkg -l openssh-server 2>&1 ) | grep -E '^ii' > /dev/null) && ssh_installed=true
+
+if [ -v $ssh_installed ] then;
+    # Detect if we're running over SSH
+    if [[ -n "${SSH_CONNECTION:-}" ]] || [[ -n "${SSH_CLIENT:-}" ]] || [[ "$XDG_SESSION_TYPE" == "tty" && -n "$(who am i | grep pts)" ]]; then
+        connection_check=true
+        log "WARN" "SSH connection detected. SSH service restart will be deferred to prevent disconnection."
     else
-        echo "Port $ssh_port" >> /etc/ssh/sshd_config
+        connection_check=false
     fi
-    
-    # Test SSH configuration
-    if ! sshd -t; then
-        log "ERROR" "SSH configuration test failed. Restoring backup."
-        if [[ -f "$BACKUP_DIR/sshd_config.backup."* ]]; then
-            cp "$BACKUP_DIR"/sshd_config.backup.* /etc/ssh/sshd_config
+
+    current_port=$(grep -E '^Port|^#Port' /etc/ssh/sshd_config | head -1 | awk '{print $2}' 2>/dev/null || echo '22')
+
+    while true; do
+        read -p "Enter new SSH port (default: 22, current: $current_port): " ssh_port
+        ssh_port=${ssh_port:-22}
+        
+        if validate_port "$ssh_port"; then
+            break
+        else
+            log "ERROR" "Invalid port number. Please enter a number between 1 and 65535."
         fi
-        return 1
+    done
+
+    # If port unchanged, skip configuration
+    if [[ "$ssh_port" == "$current_port" ]]; then
+        log "INFO" "SSH port unchanged ($ssh_port). Skipping SSH configuration."
+        return 0
     fi
-    
-    if $connection_check; then
-        log "WARN" "SSH configuration updated but service restart deferred."
-        log "WARN" "After reboot, SSH will be available on port $ssh_port"
-        log "WARN" "To apply immediately: run 'systemctl restart ssh' (may disconnect you)"
-    else
-        # Safe to restart SSH service
-        if systemctl is-active --quiet ssh; then
-            log "INFO" "Restarting SSH service to apply port change..."
-            systemctl restart ssh
-            sleep 2
-            
-            # Verify SSH is running on new port
-            if ss -tlnp | grep -q ":$ssh_port "; then
-                log "SUCCESS" "SSH service restarted successfully on port $ssh_port"
-            else
-                log "ERROR" "SSH service may not be listening on port $ssh_port"
+
+    backup_file "/etc/ssh/sshd_config"
+
+    if ! $DRY_RUN; then
+        # Handle both commented and uncommented Port lines
+        if grep -q "^Port " /etc/ssh/sshd_config; then
+            sed -i "s/^Port .*/Port $ssh_port/" /etc/ssh/sshd_config
+        elif grep -q "^#Port " /etc/ssh/sshd_config; then
+            sed -i "s/^#Port .*/Port $ssh_port/" /etc/ssh/sshd_config
+        else
+            echo "Port $ssh_port" >> /etc/ssh/sshd_config
+        fi
+        
+        # Test SSH configuration
+        if ! sshd -t; then
+            log "ERROR" "SSH configuration test failed. Restoring backup."
+            if [[ -f "$BACKUP_DIR/sshd_config.backup."* ]]; then
+                cp "$BACKUP_DIR"/sshd_config.backup.* /etc/ssh/sshd_config
+            fi
+            return 1
+        fi
+        
+        if $connection_check; then
+            log "WARN" "SSH configuration updated but service restart deferred."
+            log "WARN" "After reboot, SSH will be available on port $ssh_port"
+            log "WARN" "To apply immediately: run 'systemctl restart ssh' (may disconnect you)"
+        else
+            # Safe to restart SSH service
+            if systemctl is-active --quiet ssh; then
+                log "INFO" "Restarting SSH service to apply port change..."
+                systemctl restart ssh
+                sleep 2
+                
+                # Verify SSH is running on new port
+                if ss -tlnp | grep -q ":$ssh_port "; then
+                    log "SUCCESS" "SSH service restarted successfully on port $ssh_port"
+                else
+                    log "ERROR" "SSH service may not be listening on port $ssh_port"
+                fi
             fi
         fi
-    fi
-else
-    echo -e "${YELLOW}[DRY RUN]${NC} Would set SSH port to $ssh_port"
-    if $connection_check; then
-        echo -e "${YELLOW}[DRY RUN]${NC} SSH restart would be deferred due to active SSH connection"
     else
-        echo -e "${YELLOW}[DRY RUN]${NC} Would restart SSH service immediately"
+        echo -e "${YELLOW}[DRY RUN]${NC} Would set SSH port to $ssh_port"
+        if $connection_check; then
+            echo -e "${YELLOW}[DRY RUN]${NC} SSH restart would be deferred due to active SSH connection"
+        else
+            echo -e "${YELLOW}[DRY RUN]${NC} Would restart SSH service immediately"
+        fi
     fi
+
+    log "SUCCESS" "SSH port configured to $ssh_port"
+else
+    log "INFO" "SSH server not installed, skipping config"
 fi
-
-log "SUCCESS" "SSH port configured to $ssh_port"
-
 
 }
 
@@ -442,9 +475,6 @@ fi
     return 0
 fi
 
-return 1
-
-
 }
 
 # Install essential packages
@@ -483,7 +513,7 @@ fi
     return 0
 fi
 
-return 1
+#return 1
 
 
 }
@@ -678,6 +708,7 @@ update_system
 configure_hostname
 configure_timezone
 configure_locale
+install_ssh
 configure_ssh
 install_endlessh
 install_essential_packages
