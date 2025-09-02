@@ -492,12 +492,12 @@ install_essential_packages() {
 local install_packages
 
 
-read -p "Install essential system packages (sudo, curl, wget, ntp, htop, btop, byobu, unattended-upgrades)? (y/n): " install_packages
+read -p "Install essential system packages (sudo, curl, wget, ntp, htop, btop, byobu, fastfetch, unattended-upgrades)? (y/n): " install_packages
 
 if [[ "$install_packages" =~ ^[Yy]$ ]]; then
     log "INFO" "Installing essential packages..."
     
-    run_cmd "DEBIAN_FRONTEND=noninteractive apt install -y sudo curl wget ntp htop btop byobu unattended-upgrades apt-transport-https ca-certificates gnupg lsb-release" || {
+    run_cmd "DEBIAN_FRONTEND=noninteractive apt install -y sudo curl wget ntp htop btop byobu fastfetch  unattended-upgrades apt-transport-https ca-certificates gnupg lsb-release" || {
         log "ERROR" "Failed to install essential packages"
         return 1
     }
@@ -595,55 +595,13 @@ if [[ "$install_motd" =~ ^[Yy]$ ]]; then
     if ! $DRY_RUN; then
         cat > /etc/profile.d/motd.sh <<'EOF'
 
-
 #!/bin/bash
 
 # Check if running interactively
 
 [[ $- == *i* ]] || return
 
-# Get system information
-
-hostname=$(hostname)
-debian_version=$(cat /etc/debian_version 2>/dev/null || echo "Unknown")
-ip_address=$(hostname -I 2>/dev/null | cut -d ' ' -f 1 || echo "Unknown")
-uptime=$(uptime -p 2>/dev/null || echo "Unknown")
-current_time=$(date +"%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "Unknown")
-load_avg=$(uptime | awk -F'load average:' '{print $2}' | xargs 2>/dev/null || echo "Unknown")
-
-# Disk usage with error handling
-
-if command -v df >/dev/null 2>&1; then
-disk_usage=$(df -h / 2>/dev/null | awk 'NR==2 {print "Used: "$3"/"$2" ("$5")"}' || echo "Unknown")
-else
-disk_usage="Unknown"
-fi
-
-# Memory usage
-
-if command -v free >/dev/null 2>&1; then
-memory_usage=$(free -h | awk '/^Mem:/ {print "Used: "$3"/"$2" ("int($3/$2*100)"%)"}' 2>/dev/null || echo "Unknown")
-else
-memory_usage="Unknown"
-fi
-
-echo -e "\033[1;32m=== System Status ===\033[0m"
-echo -e "\033[1;34mHostname:\033[0m $hostname (Debian $debian_version)"
-echo -e "\033[1;34mIP Address:\033[0m $ip_address"
-echo -e "\033[1;34mUptime:\033[0m $uptime"
-echo -e "\033[1;34mLoad Average:\033[0m $load_avg"
-echo -e "\033[1;34mCurrent Time:\033[0m $current_time"
-echo -e "\033[1;34mDisk Usage:\033[0m $disk_usage"
-echo -e "\033[1;34mMemory Usage:\033[0m $memory_usage"
-
-# Show last login
-
-if command -v last >/dev/null 2>&1; then
-last_login=$(last -n 2 -w | head -2 | tail -1 | awk '{print $1" from "$3" on "$4" "$5" "$6}' 2>/dev/null || echo "Unknown")
-echo -e "\033[1;34mLast Login:\033[0m $last_login"
-fi
-
-echo ""
+fastfetch
 EOF
 chmod +x /etc/profile.d/motd.sh
 
